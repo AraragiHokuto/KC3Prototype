@@ -1,0 +1,21 @@
+{
+  "name": "kc3kai-electron",
+  "version": "0.0.1",
+  "description": "Stand-alone KC3Kai",
+  "main": "dist/index.js",
+  "scripts": {
+    "run": "tsc && electron .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Hokuto",
+  "license": "MIT",
+  "dependencies": {
+    "@types/http-proxy-agent": "^2.0.2",
+    "@types/node": "^12.0.12",
+    "http-proxy-agent": "^3.0.0",
+    "react": "^16.12.0"
+  },
+  "devDependencies": {
+    "electron": "^7.1.7"
+  }
+}
