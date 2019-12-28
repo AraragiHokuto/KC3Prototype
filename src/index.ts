@@ -1,4 +1,6 @@
 import electron from 'electron'
+import path from 'path'
+import RequestWatcher, { Watcher, Request, Response } from './RequestWatcher'
 
 function ellipsis(text: string, maxLen: number) {
     const ELLIPSIS = '...'
@@ -7,35 +9,43 @@ function ellipsis(text: string, maxLen: number) {
     return text
 }
 
-electron.app.on('ready', () => {
+class KCWatcher implements Watcher {
+    requestWillBeSent(req: Request) {
+	console.log(`requestWillBeSent: ${req.url}`)
+    }
+
+    responseReceived(res: Response) {
+	console.log(`responseReceived: ${res.url}`)
+    }
+    
+    loadingFailed(req: Request, error: string) {
+	console.log(`loadingFailed: ${error}: ${req.url}`)
+    }
+    
+    async loadingFinished(res: Response) {
+	let body = res.body && await res.body()
+	console.log(`loadingFinished: ${(typeof(body) === 'string') ? ellipsis(body as string, 200) : '<binary>'}`)
+    }
+}
+
+let watcher = new RequestWatcher
+watcher.addWatcher(/kcsapi/, new KCWatcher)
+
+electron.app
+    .on('web-contents-created', (_ev, webContents) => {
+	console.log('web-contents-created')
+	watcher.watchContent(webContents)
+    })	
+    .on('ready', () => {
     let window = new electron.BrowserWindow({
 	width: 1200,
 	height: 720,
-	title: "KC3Drei"
-    })
-
-    window.webContents.session.setProxy({ proxyRules: "socks5://localhost:1080" } as electron.Config)
-
-    window.webContents.debugger.attach('1.1')
-    window.webContents.debugger.on('detach', (_: any, reason: any) => {
-	console.log(`Debugger detached: ${reason}`)
-    })
-
-    window.webContents.debugger.on('message', async (_: any, method: any, params: any) => {
-	if (method == 'Network.requestWillBeSent') {
-	    console.log(`requestWillBeSent: ${params.request.url}`)
-	} else if (method == 'Network.loadingFinished') {
-	    console.log(`loadingFinfished: ${params.requestId}`)
-	    try {
-		let body = await window.webContents.debugger.sendCommand('Network.getResponseBody', {
-		    requestId: params.requestId
-		})
-		console.log(`body received: ${body.base64Encoded ? '(base64)' : ''} ${ellipsis(body.body, 100)}`)
-	    } catch (_) {}
+	title: "KC3Drei",
+	webPreferences: {
+	    preload: path.resolve(__dirname, 'ChromePolyfills.js')
 	}
     })
+    window.webContents.session.setProxy({ proxyRules: "socks5://localhost:1080" } as electron.Config)
 
-    window.webContents.debugger.sendCommand('Network.enable')
-    
-    window.loadURL("https://www.dmm.com")
+    window.loadFile("kc3kai/src/pages/game/direct.html")
 })

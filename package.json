@@ -4,7 +4,7 @@
   "description": "Stand-alone KC3Kai",
   "main": "dist/index.js",
   "scripts": {
-    "run": "tsc && electron .",
+    "start": "tsc && electron .",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Hokuto",
@@ -13,7 +13,8 @@
     "@types/http-proxy-agent": "^2.0.2",
     "@types/node": "^12.0.12",
     "http-proxy-agent": "^3.0.0",
-    "react": "^16.12.0"
+    "react": "^16.12.0",
+    "wildcards": "^1.0.2"
   },
   "devDependencies": {
     "electron": "^7.1.7"
