@@ -21,7 +21,6 @@ export class MessageBusServer {
     constructor() {
 	electron.ipcMain.addListener('message-bus-broadcast', (_ev, sender: Route, ...msg) => {
 	    // routing msg to all clients
-	    logToMain(sender, ...msg)
 	    this.clients.map(item => {
 		electron.webContents
 		    .fromId(item.contentId)
@@ -33,7 +32,6 @@ export class MessageBusServer {
 	    electron.webContents.fromId(receiver.contentId).sendToFrame(receiver.frameId, 'message-bus-specific', sender, id, ...msg)
 	})
 	electron.ipcMain.addListener('message-bus-specific-main', (_ev, sender: Route, id, receiver: number, ...msg) => {
-	    logToMain(`specific-main ${JSON.stringify(msg)}`)
 	    // hack: send to all frames under the specific webContents
 	    let content = electron.webContents.fromId(receiver)
 	    this.clients.filter(item => item.contentId == receiver)
@@ -89,7 +87,6 @@ export class MessageBusClient {
     
     constructor() {
 	electron.ipcRenderer.on('message-bus-broadcast', (_ev, sender, id, msg) => {
-	    logToMain(`recvMsg broadcast: ${sender.contentId} ${sender.frameId} ${JSON.stringify(msg)}`)
 	    let asyncReply = false
 	    this.listeners.map(callback => {
 		asyncReply = asyncReply || callback(msg, {}, (reply: any) =>
@@ -110,7 +107,6 @@ export class MessageBusClient {
 	})
 
 	electron.ipcRenderer.on('message-bus-reply', (_ev, id, hasReply, reply) => {
-	    logToMain(`recvMsg: reply: ${JSON.stringify(hasReply)} ${JSON.stringify(reply)}`)
 	    let handler = this.pendingReplies[id] 
 	    handler && handler(hasReply, reply)
 	})
@@ -139,7 +135,6 @@ export class MessageBusClient {
 	    channel = 'message-bus-specific-main'
 	    receiver = contentId
 	}
-	logToMain(`specific-send: ${receiver}`)
 	let id = this.sendToBus(channel, receiver, msg)
 	return waitReply ? this.createReplyPromise(id) : undefined
     }

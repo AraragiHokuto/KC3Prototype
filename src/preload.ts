@@ -2,8 +2,9 @@ import matcher from 'matcher'
 import fs from 'fs'
 import electron from 'electron'
 import path from 'path'
+import { MessageBusClient } from './MessageBus'
 
-// replace console.log to allow logging in main
+// replace console.log to allow logging to main
 const log = (...args: any[]) => electron.ipcRenderer.send('renderer-logging', ...args)
 console.log = log
 
@@ -19,7 +20,7 @@ let background_scripts = manifest.background.scripts
 let content_scripts = manifest.content_scripts
 
 declare global {
-    interface Window { _isKC3PrototypeIndex?: boolean; KC3Meta: any }
+    interface Window { _isKC3PrototypeIndex?: boolean; KC3Meta: any; axios: any; }
 }
 
 function loadJS(path: string) {
@@ -61,7 +62,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 	for (let j of i.matches) {
 	    if (matcher.isMatch(document.location.href, j)) {
 		match = true
-		log(`match: ${j}`)
+		log(`match: ${j} ${document.location.href}`)
 	    }
 	}
 
@@ -86,6 +87,21 @@ window.addEventListener('DOMContentLoaded', async () => {
 
 	    await loadJS(item)
 	}
+    }
+})
+
+window.addEventListener('load', () => {
+    if (/\/kcs2\/index\.php\?/.exec(document.location.href)) {
+	log(`preload: injecting scripts for API page`)
+
+	let bus = new MessageBusClient
+
+	window.axios.interceptors.response.use((res: any) => {
+	    log(`interceptor: ${res.config.url}`)
+	    // NOTE: optimization possible?
+	    bus.broadcast({ type: "interceptor", response: res }, false)
+	    return res
+	})
     }
 })
 

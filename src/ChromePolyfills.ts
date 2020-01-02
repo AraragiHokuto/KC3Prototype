@@ -41,12 +41,10 @@ window.chrome = {
     runtime: {
 	onMessage: {
 	    addListener(callback: any) {
-		bus.addListener((msg: any, _sender: any, reply: any) =>
-				callback(
-				    msg.msg,
-				    { tab: msg.tab }, 
-				    reply
-				))
+		bus.addListener(
+		    (msg: any, _sender: any, reply: any) =>
+			msg.type == 'runtime' && callback(msg.msg, { tab: msg.tab }, reply)
+		)
 	    }
 	},
 
@@ -58,6 +56,7 @@ window.chrome = {
 	    logToMain(`sendMsg: ${webFrame.routingId} ${JSON.stringify(message)}`)
 	    let promise
 	    let msg = {
+		type: "runtime",
 		tab: window.chrome.tabs._getCurrent(),
 		msg: message
 	    }
@@ -99,6 +98,7 @@ window.chrome = {
 	    logToMain(`sendMsg: ${webFrame.routingId} ${JSON.stringify(message)}`)
 	    let promise
 	    let msg = {
+		type: "runtime",
 		tab: window.chrome.tabs._getCurrent(),
 		msg: message
 	    }
@@ -141,7 +141,32 @@ window.chrome = {
 	},
 	network: {
 	    onRequestFinished: {
-		addListener(_callback: any) {} // XXX: stub
+		addListener(callback: any) {
+		    bus.addListener((msg: any) => {
+			if (msg.type != 'interceptor')
+			    return
+
+			let res = msg.response
+			let headers = []
+			for (let key in res.headers) {
+			    headers.push({ name: key, value: res.headers[key]})
+			}
+			headers.push({ name: "Date", value: res.headers.date })
+			callback({
+			    request: {
+				url: res.config.url
+			    },
+			    response: {
+				status: res.status,
+				statusText: res.statusText,
+				headers: headers
+			    },
+			    getContent(callback: any) {
+				callback(res.data, "")
+			    }
+			})
+		    })
+		} // XXX: stub
 	    }
 	}
     }

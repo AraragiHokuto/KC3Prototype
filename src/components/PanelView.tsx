@@ -11,7 +11,7 @@ interface Panel {
 
 const PanelIFrame = styled.iframe`
     width: 100%;
-    height: 100%;
+    height: 650px;
     border: 0;
     margin: 0;
     padding: 0;
@@ -20,13 +20,15 @@ const PanelIFrame = styled.iframe`
 
 const PanelView = () => {
     const [panels,  setPanels] = React.useState<Panel[]>([])
+    const [currentPanel, setCurrentPanel] = React.useState<string | number>('')
 
     ipcRenderer.on('kc3proto-add-panel', (_ev, panel: Panel) => {
 	setPanels(panels.concat([panel]))
+	setCurrentPanel(panel.url)
     })
     
     return (
-	<Tabs id="panelView" defaultSelectedTabId={panels.length ? panels[panels.length-1].url : undefined}>
+	<Tabs id="panelView" onChange={newTabId => setCurrentPanel(newTabId)} selectedTabId={currentPanel}>
 	{
 	    panels.map(panel => (
 		<Tab key={panel.url} id={panel.url} title={panel.name} panel={

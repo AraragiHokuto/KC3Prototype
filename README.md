@@ -1,5 +1,7 @@
-# KC3Drei -- Stand-alone version of KC3Kai
+# KC3Prototype -- Stand-alone version of KC3Kai
 
-__NOT WORKING YET__
+__Early Version: Be Careful!__
+
+Stand alone application utilizing KC3Kai extension
 
 To execute: yarn start
