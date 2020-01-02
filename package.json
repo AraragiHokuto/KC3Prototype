@@ -10,13 +10,16 @@
   "author": "Hokuto",
   "license": "MIT",
   "dependencies": {
+    "@blueprintjs/core": "^3.22.3",
     "@types/http-proxy-agent": "^2.0.2",
     "@types/node": "^12.0.12",
     "http-proxy-agent": "^3.0.0",
+    "matcher": "^2.1.0",
     "react": "^16.12.0",
-    "wildcards": "^1.0.2"
+    "styled-components": "^4.4.1"
   },
   "devDependencies": {
+    "@types/react": "^16.9.17",
     "electron": "^7.1.7"
   }
 }

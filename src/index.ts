@@ -1,51 +1,77 @@
 import electron from 'electron'
 import path from 'path'
-import RequestWatcher, { Watcher, Request, Response } from './RequestWatcher'
+import fs from 'fs'
 
-function ellipsis(text: string, maxLen: number) {
-    const ELLIPSIS = '...'
-    if (text.length > maxLen)
-	text = text.substr(0, maxLen - ELLIPSIS.length) + ELLIPSIS
-    return text
-}
-
-class KCWatcher implements Watcher {
-    requestWillBeSent(req: Request) {
-	console.log(`requestWillBeSent: ${req.url}`)
-    }
-
-    responseReceived(res: Response) {
-	console.log(`responseReceived: ${res.url}`)
-    }
-    
-    loadingFailed(req: Request, error: string) {
-	console.log(`loadingFailed: ${error}: ${req.url}`)
-    }
-    
-    async loadingFinished(res: Response) {
-	let body = res.body && await res.body()
-	console.log(`loadingFinished: ${(typeof(body) === 'string') ? ellipsis(body as string, 200) : '<binary>'}`)
-    }
-}
-
-let watcher = new RequestWatcher
-watcher.addWatcher(/kcsapi/, new KCWatcher)
+import { MessageBusServer } from './MessageBus'
 
 electron.app
-    .on('web-contents-created', (_ev, webContents) => {
-	console.log('web-contents-created')
-	watcher.watchContent(webContents)
-    })	
     .on('ready', () => {
-    let window = new electron.BrowserWindow({
-	width: 1200,
-	height: 720,
-	title: "KC3Drei",
-	webPreferences: {
-	    preload: path.resolve(__dirname, 'ChromePolyfills.js')
-	}
-    })
-    window.webContents.session.setProxy({ proxyRules: "socks5://localhost:1080" } as electron.Config)
+	electron.ipcMain.addListener('renderer-logging', (_ev, ...args: any[]) => console.log(...args))
+	let window = new electron.BrowserWindow({
+	    width: 1600,
+	    height: 800,
+	    title: "KC3 Prototype",
+	    webPreferences: {
+		webSecurity: false,
+		nodeIntegration: true,
+		nodeIntegrationInSubFrames: true,
+		preload: path.resolve(__dirname, 'preload.js')
+	    }
+	})
 
-    window.loadFile("kc3kai/src/pages/game/direct.html")
-})
+	let gameView = new electron.BrowserView({
+	    webPreferences: {
+		webSecurity: false,
+		nodeIntegration: true,
+		nodeIntegrationInSubFrames: true,
+		preload: path.resolve(__dirname, 'preload.js')
+	    }
+	})
+	    
+	let panelView = new electron.BrowserView({
+	    webPreferences: {
+		webSecurity: false,
+		nodeIntegration: true,
+		nodeIntegrationInSubFrames: true,
+		preload: path.resolve(__dirname, 'preload.js')
+	    }
+	})
+
+	// Bus server
+	new MessageBusServer
+
+	window.addBrowserView(gameView)
+	window.addBrowserView(panelView)
+
+	gameView.setBounds({
+	    x: 0, y: 0,
+	    width: 1200,
+	    height: 720
+	})
+	panelView.setBounds({
+	    x: 1200, y: 0,
+	    width: window.getBounds().width - 1200,
+	    height: 720
+	})
+	panelView.setAutoResize({ width: true })
+
+	// remove X-Frame-Options to allow login page in iframe
+	gameView.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+	    if (!details.responseHeaders)
+		return callback({cancel: false, responseHeaders: details.responseHeaders})
+	    
+	    if (details.responseHeaders['x-frame-options'] || details.responseHeaders['X-Frame-Options']) {
+		delete details.responseHeaders['x-frame-options']
+		delete details.responseHeaders['X-Frame-Options']
+	    }
+
+	    callback({cancel: false, responseHeaders: details.responseHeaders})
+	})
+
+	gameView.webContents.session.setProxy({ proxyRules: "socks5://localhost:1080" } as electron.Config)
+
+	window.loadFile('index.html')
+
+	gameView.webContents.loadFile('gameView.html')
+	panelView.webContents.loadFile('panelView.html')
+    })

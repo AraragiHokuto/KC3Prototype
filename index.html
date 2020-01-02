@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+    <head>
+	<title>KC3Drei</title>
+    </head>
+    <body>
+	<style>
+	 body {
+	     width: 100vw;
+	     height: 100vh;
+	     margin: 0;
+	 }
+	 #gameView-placeholder {
+	     position: absolute;
+	     left: 0;
+	     top: 0;
+	     width: 1200px;
+	     height: 720px;
+	     background-color: red;
+	 }
+	 #panelView-placeholder {
+	     position: absolute;
+	     left: 1200px;
+	     top: 0;
+	     width: calc(100vw - 1200px);
+	     height: 720px;
+	     background-color: blue;
+	 }
+	</style>
+	<div id="gameView-placeholder"></div>
+	<div id="panelView-placeholder"></div>
+	<script>
+	    window._isKC3PrototypeIndex = true;
+	</script>
+</html>
