@@ -8,7 +8,7 @@ electron.app
     .on('ready', () => {
 	electron.ipcMain.addListener('renderer-logging', (_ev, ...args: any[]) => console.log(...args))
 	let window = new electron.BrowserWindow({
-	    width: 2000,
+	    width: 1600,
 	    height: 800,
 	    title: "KC3 Prototype",
 	    webPreferences: {
