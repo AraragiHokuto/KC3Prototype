@@ -54,11 +54,38 @@ window.chrome = {
 	    addListener(_callback: any) {}
 	},
 
-	sendMessage(message: any, responseCallback?: (response: any) => void) {
-	    logToMain(`sendMsg: ${webFrame.routingId} ${JSON.stringify(message)}`)
-	    let promise = bus.broadcast({ tab: window.chrome.tabs._getCurrent(), msg: message }, !!responseCallback)
+	_sendMessage(message: any, responseCallback?: (response: any) => void, tabId?: number) {
+	    logToMain(`sendMsg: ${tabId ? tabId : ""} ${webFrame.routingId} ${JSON.stringify(message)}`)
+	    let promise
+	    let msg = {
+		tab: window.chrome.tabs._getCurrent(),
+		msg: message
+	    }
+	    if (tabId)
+		promise = bus.specific(msg, !!responseCallback, tabId)
+	    else
+		promise = bus.broadcast(msg, !!responseCallback)
 	    if (responseCallback) {
 		promise && promise.then(reply => reply && responseCallback(reply))
+	    }
+	},
+
+	sendMessage(a: any, b: any, c: any) {
+	    // Chrome API is s**t
+	    if (a !== undefined && b !== undefined && c !== undefined) {
+		// a = tabId, b = message, c = callback
+		this._sendMessage(b, c, a)
+	    } else if (a !== undefined && b === undefined && c === undefined) {
+		// a = message
+		this._sendMessage(b)
+	    } else if (a !== undefined && b !== undefined && c === undefined) {
+		if (typeof a === 'number') {
+		    // assume a = tabId, b = message
+		    this._sendMessage(b, undefined, a)
+		} else {
+		    // assume a = message, b = callback
+		    this._sendMessage(a, b)
+		}
 	    }
 	},
 	
@@ -97,6 +124,29 @@ window.chrome = {
     extension: {
 	getURL(file: string) {
 	    return `file://${path.join(__dirname, '../kc3kai/src', file)}`
+	}
+    },
+
+    devtools: {
+	panels: {
+	    create(title: string, _iconPath: string, pagePath: string, callback: (panel: any) => void) {
+		ipcRenderer.sendTo(
+		    remote.getCurrentWebContents().id,
+		    'kc3proto-add-panel',
+		    {
+			name: title,
+			url: pagePath
+		    }
+		);
+		callback({})
+	    }
+	},
+	inspectedWindow: {
+	},
+	network: {
+	    onRequestFinished: {
+		addListener(_callback: any) {} // XXX: stub
+	    }
 	}
     }
 }

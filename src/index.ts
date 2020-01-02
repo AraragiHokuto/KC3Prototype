@@ -8,7 +8,7 @@ electron.app
     .on('ready', () => {
 	electron.ipcMain.addListener('renderer-logging', (_ev, ...args: any[]) => console.log(...args))
 	let window = new electron.BrowserWindow({
-	    width: 1600,
+	    width: 2000,
 	    height: 800,
 	    title: "KC3 Prototype",
 	    webPreferences: {
@@ -71,6 +71,25 @@ electron.app
 	gameView.webContents.session.setProxy({ proxyRules: "socks5://localhost:1080" } as electron.Config)
 
 	window.loadFile('index.html')
+
+	// some theme (e.g. natsuiro) use absolute paths to load assets
+	// intercept them here so we can redirect to the correct paht
+	panelView.webContents.session.protocol.interceptFileProtocol(
+	    'file',
+	    (req, callback) => {
+		let p = req.url.substr(7)
+		let redirected = path.join(__dirname, '../kc3kai/src', p)
+		console.log(`intercept: ${p} => ${redirected}`)
+		if (fs.existsSync(redirected))
+		    callback(redirected)
+		else
+		    callback(p)
+	    }
+	)
+
+	electron.ipcMain.on('request-inspected-tab-id', (ev) => {
+	    ev.returnValue = gameView.webContents.id
+	})
 
 	gameView.webContents.loadFile('gameView.html')
 	panelView.webContents.loadFile('panelView.html')

@@ -30,7 +30,10 @@ export class MessageBusServer {
 	})
 	electron.ipcMain.addListener('message-bus-specific', (_ev, sender: Route, _id, receiver: Route, ...msg) => {
 	    // directly send to receiver
-	    electron.webContents.fromId(receiver.contentId).sendToFrame(receiver.frameId, 'message-bus-directed', sender, ...msg)
+	    electron.webContents.fromId(receiver.contentId).sendToFrame(receiver.frameId, 'message-bus-specific', sender, ...msg)
+	})
+	electron.ipcMain.addListener('message-bus-specific-main', (_ev, sender: Route, _id, receiver: number, ...msg) => {
+	    electron.webContents.fromId(receiver).send('message-bus-specific', sender, ...msg)
 	})
 	electron.ipcMain.addListener('message-bus-reply', (_ev, _sender, _id, receiver: Route, ...msg) => {
 	    // directly send to receiver
@@ -115,6 +118,22 @@ export class MessageBusClient {
 
     broadcast(msg: any, waitReply: boolean) {
 	let id = this.sendToBus('message-bus-broadcast', msg)
+	return waitReply ? this.createReplyPromise(id) : undefined
+    }
+
+    specific(msg: any, waitReply: boolean, contentId: number, frameId?: number) {
+	let channel, receiver
+	if (frameId) {
+	    channel = 'message-bus-specific'
+	    receiver = {
+		contentId: contentId,
+		frameId: frameId
+	    }
+	} else {
+	    channel = 'message-bus-specific-main'
+	    receiver = contentId
+	}
+	let id = this.sendToBus(channel, receiver, msg)
 	return waitReply ? this.createReplyPromise(id) : undefined
     }
 }
