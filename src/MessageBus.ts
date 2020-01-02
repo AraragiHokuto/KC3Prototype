@@ -28,12 +28,18 @@ export class MessageBusServer {
 		    .sendToFrame(item.frameId, 'message-bus-broadcast', sender, ...msg)
 	    })
 	})
-	electron.ipcMain.addListener('message-bus-specific', (_ev, sender: Route, _id, receiver: Route, ...msg) => {
+	electron.ipcMain.addListener('message-bus-specific', (_ev, sender: Route, id, receiver: Route, ...msg) => {
 	    // directly send to receiver
-	    electron.webContents.fromId(receiver.contentId).sendToFrame(receiver.frameId, 'message-bus-specific', sender, ...msg)
+	    electron.webContents.fromId(receiver.contentId).sendToFrame(receiver.frameId, 'message-bus-specific', sender, id, ...msg)
 	})
-	electron.ipcMain.addListener('message-bus-specific-main', (_ev, sender: Route, _id, receiver: number, ...msg) => {
-	    electron.webContents.fromId(receiver).send('message-bus-specific', sender, ...msg)
+	electron.ipcMain.addListener('message-bus-specific-main', (_ev, sender: Route, id, receiver: number, ...msg) => {
+	    logToMain(`specific-main ${JSON.stringify(msg)}`)
+	    // hack: send to all frames under the specific webContents
+	    let content = electron.webContents.fromId(receiver)
+	    this.clients.filter(item => item.contentId == receiver)
+		.map(item => {
+		    content.sendToFrame(item.frameId, 'message-bus-specific', sender, id, ...msg)
+		})
 	})
 	electron.ipcMain.addListener('message-bus-reply', (_ev, _sender, _id, receiver: Route, ...msg) => {
 	    // directly send to receiver
@@ -83,7 +89,7 @@ export class MessageBusClient {
     
     constructor() {
 	electron.ipcRenderer.on('message-bus-broadcast', (_ev, sender, id, msg) => {
-	    logToMain(`recvMsg: broadcast: ${JSON.stringify(msg)}`)
+	    logToMain(`recvMsg broadcast: ${sender.contentId} ${sender.frameId} ${JSON.stringify(msg)}`)
 	    let asyncReply = false
 	    this.listeners.map(callback => {
 		asyncReply = asyncReply || callback(msg, {}, (reply: any) =>
@@ -133,6 +139,7 @@ export class MessageBusClient {
 	    channel = 'message-bus-specific-main'
 	    receiver = contentId
 	}
+	logToMain(`specific-send: ${receiver}`)
 	let id = this.sendToBus(channel, receiver, msg)
 	return waitReply ? this.createReplyPromise(id) : undefined
     }

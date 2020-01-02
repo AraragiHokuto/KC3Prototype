@@ -21,11 +21,6 @@
 	</style>
 	<div id="react-container"></div>
 	<script>var exports = {"__esModule": true};</script>
-	<!-- request inspectedTabId -->
-	<script>
-	 const { ipcRenderer } = require('electron')
-	 chrome.devtools.inspectedWindow.tabId = ipcRenderer.sendSync('request-inspected-tab-id')
-	</script>
 	<script src="dist/components/PanelView.js"></script>
 
 	<iframe style="display: none;" src="kc3kai/src/pages/devtools/init.html"></iframe>

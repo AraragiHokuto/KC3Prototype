@@ -1,7 +1,7 @@
 // Polyfills for chrome API
 // Implement on a as needed basis
 
-import { remote, ipcRenderer, webFrame } from 'electron'
+import { remote, ipcRenderer, webFrame, ipcMain } from 'electron'
 import process from 'process'
 import path from 'path'
 import fs from 'fs'
@@ -54,41 +54,17 @@ window.chrome = {
 	    addListener(_callback: any) {}
 	},
 
-	_sendMessage(message: any, responseCallback?: (response: any) => void, tabId?: number) {
-	    logToMain(`sendMsg: ${tabId ? tabId : ""} ${webFrame.routingId} ${JSON.stringify(message)}`)
+	sendMessage(message: any, responseCallback?: (response: any) => void) {
+	    logToMain(`sendMsg: ${webFrame.routingId} ${JSON.stringify(message)}`)
 	    let promise
 	    let msg = {
 		tab: window.chrome.tabs._getCurrent(),
 		msg: message
 	    }
-	    if (tabId)
-		promise = bus.specific(msg, !!responseCallback, tabId)
-	    else
-		promise = bus.broadcast(msg, !!responseCallback)
-	    if (responseCallback) {
-		promise && promise.then(reply => reply && responseCallback(reply))
-	    }
+	    promise = bus.broadcast(msg, !!responseCallback)
+	    responseCallback && promise && promise.then(reply => reply && responseCallback(reply))
 	},
 
-	sendMessage(a: any, b: any, c: any) {
-	    // Chrome API is s**t
-	    if (a !== undefined && b !== undefined && c !== undefined) {
-		// a = tabId, b = message, c = callback
-		this._sendMessage(b, c, a)
-	    } else if (a !== undefined && b === undefined && c === undefined) {
-		// a = message
-		this._sendMessage(b)
-	    } else if (a !== undefined && b !== undefined && c === undefined) {
-		if (typeof a === 'number') {
-		    // assume a = tabId, b = message
-		    this._sendMessage(b, undefined, a)
-		} else {
-		    // assume a = message, b = callback
-		    this._sendMessage(a, b)
-		}
-	    }
-	},
-	
 	getPlatformInfo(callback: (info: any) => void) {
 	    callback({
 		os: process.platform
@@ -112,12 +88,26 @@ window.chrome = {
     tabs: {
 	_getCurrent() {
 	    return {
-		id: webFrame.routingId,
+		id: remote.getCurrentWebContents().id,
 		url: window.location.href
 	    }
 	},
 	update(_tab: any, _info: any, callback: any) {
 	    callback()
+	},
+	sendMessage(tabId: number, message: any, responseCallback?: (response: any) => void) {
+	    logToMain(`sendMsg: ${webFrame.routingId} ${JSON.stringify(message)}`)
+	    let promise
+	    let msg = {
+		tab: window.chrome.tabs._getCurrent(),
+		msg: message
+	    }
+	    promise = bus.specific(msg, !!responseCallback, tabId)
+	    responseCallback && promise && promise.then(reply => reply && responseCallback(reply))
+	},
+	get(tabId: number, callback: any) {
+	    // stub
+	    callback({ id: tabId })
 	}
     },
 
@@ -142,6 +132,12 @@ window.chrome = {
 	    }
 	},
 	inspectedWindow: {
+	    _tabId: undefined,
+	    get tabId() {
+		if (!this._tabId)
+		    this._tabId = ipcRenderer.sendSync('kc3proto-request-inspected-tab-id')
+		return this._tabId
+	    }
 	},
 	network: {
 	    onRequestFinished: {

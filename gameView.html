@@ -17,5 +17,9 @@
 	 }
 	</style>
 	<iframe src="kc3kai/src/pages/game/direct.html" scrolling="no"></iframe> 
+	<script>
+	 const { ipcRenderer } = require('electron');
+	 window.addEventListener('load', () => ipcRenderer.send('kc3proto-gameview-ready'));
+	</script>
     </body>
 </html>

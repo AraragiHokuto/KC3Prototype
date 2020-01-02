@@ -9,7 +9,7 @@ electron.app
 	electron.ipcMain.addListener('renderer-logging', (_ev, ...args: any[]) => console.log(...args))
 	let window = new electron.BrowserWindow({
 	    width: 1600,
-	    height: 800,
+	    height: 720,
 	    title: "KC3 Prototype",
 	    webPreferences: {
 		webSecurity: false,
@@ -18,6 +18,8 @@ electron.app
 		preload: path.resolve(__dirname, 'preload.js')
 	    }
 	})
+
+	window.setMenuBarVisibility(false)
 
 	let gameView = new electron.BrowserView({
 	    webPreferences: {
@@ -87,10 +89,17 @@ electron.app
 	    }
 	)
 
-	electron.ipcMain.on('request-inspected-tab-id', (ev) => {
+	electron.ipcMain.on('kc3proto-request-inspected-tab-id', (ev) => {
 	    ev.returnValue = gameView.webContents.id
 	})
 
 	gameView.webContents.loadFile('gameView.html')
-	panelView.webContents.loadFile('panelView.html')
+
+	gameView.webContents.openDevTools()
+	
+	// activate panel after gameview has loaded
+	electron.ipcMain.on('kc3proto-gameview-ready', () => {
+	    panelView.webContents.loadFile('panelView.html')
+	    panelView.webContents.openDevTools()
+	})
     })

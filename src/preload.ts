@@ -37,7 +37,6 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     if (window._isKC3PrototypeIndex) {
 	// load backgrounds
-	console.log(`isIndex ${background_scripts}`)
 	for (let item of background_scripts) {
 	    try {
 		await loadJS(path.join(__dirname, `../kc3kai/src/${item}`))
