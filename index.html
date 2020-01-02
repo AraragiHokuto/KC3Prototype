@@ -2,6 +2,9 @@
 <html>
     <head>
 	<title>KC3 Prototype</title>
+	    <link href="node_modules/normalize.css/normalize.css" rel="stylesheet" />
+	    <link href="node_modules/@blueprintjs/icons/lib/css/blueprint-icons.css" rel="stylesheet" />
+	    <link href="node_modules/@blueprintjs/core/lib/css/blueprint.css"  rel="stylesheet" />
     </head>
     <body>
 	<style>
@@ -24,10 +27,19 @@
 	     width: calc(100vw - 1200px);
 	     height: 720px;
 	 }
+	 #react-container {
+	     position: absolute;
+	     left: 0;
+	     right: 0;
+	     height: 50px;
+	 }
 	</style>
 	<div id="gameView-placeholder"></div>
 	<div id="panelView-placeholder"></div>
+	<div id="react-container"></div>
+	<script>var exports = {"__esModule": true};</script>
 	<script>
 	    window._isKC3PrototypeIndex = true;
 	</script>
+	<script src="dist/components/index.js"></script>
 </html>
