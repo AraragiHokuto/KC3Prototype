@@ -90,7 +90,14 @@ electron.app
 	electron.ipcMain.addListener(
 	    'kc3proto-open-window',
 	    (_ev, url) => {
-		let win = new electron.BrowserWindow()
+		let win = new electron.BrowserWindow({
+		    webPreferences: {
+			webSecurity: false,
+			nodeIntegration: true,
+			nodeIntegrationInSubFrames: true,
+			preload: path.resolve(__dirname, 'preload.js')
+		    }
+		})
 		win.setMenuBarVisibility(false)
 		win.loadURL(url)
 	    }

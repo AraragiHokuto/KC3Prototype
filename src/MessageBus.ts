@@ -22,9 +22,8 @@ export class MessageBusServer {
 	electron.ipcMain.addListener('message-bus-broadcast', (_ev, sender: Route, ...msg) => {
 	    // routing msg to all clients
 	    this.clients.map(item => {
-		electron.webContents
-		    .fromId(item.contentId)
-		    .sendToFrame(item.frameId, 'message-bus-broadcast', sender, ...msg)
+		let content = electron.webContents.fromId(item.contentId)
+		content && content.sendToFrame(item.frameId, 'message-bus-broadcast', sender, ...msg)
 	    })
 	})
 	electron.ipcMain.addListener('message-bus-specific', (_ev, sender: Route, id, receiver: Route, ...msg) => {
