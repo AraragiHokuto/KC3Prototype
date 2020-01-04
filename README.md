@@ -10,4 +10,8 @@ Most of functions should be working by now
 
 # How to use
 
-To execute: yarn start
+```
+git clone git@github.com:AraragiHokuto/KC3Prototype.git --recurse-submodules
+cd KC3Prototype
+yarn start
+```
