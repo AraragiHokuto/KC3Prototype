@@ -122,6 +122,7 @@ electron.app
 	electron.ipcMain.addListener(
 	    'kc3proto-game-navigate',
 	    (_ev, url) => {
+		console.log(`navigate: ${url}`)
 		gameView.webContents.loadURL(url)
 		window.webContents.send('kc3proto-on-game-navigate', url)
 	    }
@@ -139,6 +140,12 @@ electron.app
 		})
 		win.setMenuBarVisibility(false)
 		win.loadURL(url)
+	    }
+	)
+	electron.ipcMain.addListener(
+	    'kc3proto-game-ready',
+	    () => {
+		gameView.webContents.insertCSS('::-webkit-scrollbar { display: none; }')
 	    }
 	)
 

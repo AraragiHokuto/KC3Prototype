@@ -187,7 +187,7 @@ window.chrome = {
 		msg: message
 	    }
 	    promise = bus.broadcast(msg, !!responseCallback)
-	    responseCallback && promise && promise.then(reply => reply && responseCallback(reply))
+	    responseCallback && promise && promise.then(reply => responseCallback(reply))
 	},
 
 	getPlatformInfo(callback: (info: any) => void) {
@@ -241,6 +241,28 @@ window.chrome = {
 	}
     },
 
+    downloads: {
+	setShelfEnabled(_e: boolean) {}, // stub
+	async _download(options: { url: string, filename?: string }) {
+	    if (!options.url.startsWith('blob'))
+		return
+	    let blob = await (await fetch(options.url)).blob()
+	    let reader = new FileReader
+	    reader.readAsArrayBuffer(blob)
+	    let saveRet = await remote.dialog.showSaveDialog({
+		defaultPath: options.filename
+	    })
+
+	    if (saveRet.canceled)
+		return
+	    return promisify(fs.writeFile)(saveRet.filePath as string, new Buffer(reader.result as ArrayBuffer))
+	},
+	download(options: { url: string, filename?: string }, callback: (id: number) => void) {
+	    //stub
+	    this._download(options).then(() => callback(1))
+	}
+    },
+
     tabs: {
 	_getCurrent(): ChromeTabInfo {
 	    return {
@@ -273,7 +295,7 @@ window.chrome = {
 	    else
 		buffer = nativeImage.toJPEG(quality)
 
-	    return `dataurl:image/${format};base64,` + buffer.toString('base64')
+	    return `data:image/${format};base64,` + buffer.toString('base64')
 	},
 	captureVisibleTab(tabId: number, options: Partial<{ format: "jpeg" | "png", quality: number }>, callback: (url: string) => void) {
 	    this._captureVisibleTab(tabId, options).then(callback)
@@ -287,7 +309,7 @@ window.chrome = {
 		msg: message
 	    }
 	    promise = bus.specific(msg, !!responseCallback, tabId)
-	    responseCallback && promise && promise.then(reply => reply && responseCallback(reply))
+	    responseCallback && promise && promise.then(reply => responseCallback(reply))
 	},
 	getCurrent(callback: (info: ChromeTabInfo) => void) {
 	    callback(this._getCurrent())
@@ -401,12 +423,8 @@ const _tabHandlers = {
 	return webFrame.getZoomFactor()
     },
     update: (data: any) => {
-	let ret = window.chrome.tabs._getCurrent()
-	if (data.muted !== undefined) {
-	    ret.mutedInfo = { muted: !data.muted }
-	    remote.getCurrentWebContents().setAudioMuted(data.muted)
-	}
-	return ret
+	remote.getCurrentWebContents().audioMuted = data.muted
+	return window.chrome.tabs._getCurrent()
     }
 } as any
 

@@ -46,13 +46,13 @@ const NavigationWrapper = () => {
 
 const NavigationDiv = styled.div`
     text-align: center;
-    width: 1180px;
     height: 100%;
+    flex-grow: 1;
 `
 
 const ButtonGroupDiv = styled.div`
     text-align: center;
-    flex-grow: 1;
+    width: 600px;
 `
 
 const ContainerDiv = styled.div`

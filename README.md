@@ -8,11 +8,6 @@ Stand-alone version of KC3Kai with electron
 
 Most of functions should be working by now
 
-# Known issues
-
-- DB submissions not working
-- Screenshot not working
-
 # How to use
 
 To execute: yarn start

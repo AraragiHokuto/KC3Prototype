@@ -101,7 +101,7 @@ window.addEventListener('load', () => {
 	})
 
 	// told main window to resize
-	electron.ipcRenderer.send('kc3proto-window-update')
+	electron.ipcRenderer.send('kc3proto-game-ready')
     }
 })
 
