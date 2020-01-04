@@ -34,7 +34,7 @@ electron.app
 	try {
 	    config = JSON.parse(fs.readFileSync('./config.json', 'utf8')) as KC3ProtoConfig
 	} catch (_) {
-	    config = undefined
+	    config = {}
 	}
 
 	window.setMenuBarVisibility(false)

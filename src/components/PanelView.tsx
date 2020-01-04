@@ -18,7 +18,12 @@ const WrapperDiv = styled.div`
 
 const ConfigPanel = () => {
     console.log(__dirname)
-    let initConfig = JSON.parse(fs.readFileSync('./config.json', 'utf8'))
+    let initConfig
+    try {
+	initConfig = JSON.parse(fs.readFileSync('./config.json', 'utf8'))
+    } catch (_) {
+	initConfig = {}
+    }
     const [proxyURL, setProxyURL] = React.useState<string>(initConfig.proxyConfig ? initConfig.proxyConfig.proxyRules : '')
     const [useProxy, setUseProxy] = React.useState<boolean>(!!initConfig.proxyConfig)
 
@@ -31,11 +36,12 @@ const ConfigPanel = () => {
 			 }
 	)
     }
+    submit()
     
     return (
 	<WrapperDiv>
 	    <FormGroup>
-		<Switch checked={useProxy} onChange={ev => setUseProxy((ev.target as HTMLInputElement).checked)} label="Use Proxy" />
+		<Switch checked={useProxy} onChange={ev => setUseProxy((ev.target as HTMLInputElement).checked) } label="Use Proxy" />
 	    </FormGroup>
 	    <FormGroup>
 		<InputGroup
