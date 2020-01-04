@@ -17,6 +17,7 @@ const NavigationArea = (props: NavigationAreaProps) => {
 	<InputGroup
 	fill={true}
 	value={props.url}
+	onKeyUp={ev => ev.keyCode === 13 && props.navigate()}
 	onChange={(ev: any) => props.onChange(ev.target.value)}
 	rightElement={
 	    <Button minimal={true} icon="arrow-right" onClick={props.navigate} />
@@ -30,8 +31,14 @@ const navigate = (url: string) => {
 
 const NavigationWrapper = () => {
     const [val, setVal] = React.useState<string>('')
-    electron.ipcRenderer.on('kc3proto-on-game-navigate', (_ev, url) => {
-	setVal(url)
+
+    React.useEffect(() => {
+	const listener = (_ev: any, url: string) => setVal(url)
+	electron.ipcRenderer.on('kc3proto-on-game-navigate', listener)
+
+	return () => {
+	    electron.ipcRenderer.removeListener('kc3proto-on-game-navigate', listener)
+	}
     })
 
     return <NavigationArea url={val} onChange={setVal} navigate={() => navigate(val)} />
@@ -39,7 +46,7 @@ const NavigationWrapper = () => {
 
 const NavigationDiv = styled.div`
     text-align: center;
-    width: 1200px;
+    width: 1180px;
     height: 100%;
 `
 
@@ -52,7 +59,8 @@ const ContainerDiv = styled.div`
     display: flex;
     flex-direction: row;
     height: 100%;
-    width: 100%:
+    width: 100%;
+    padding: 10px;
 `
 
 const openWindow = (url: string) => {

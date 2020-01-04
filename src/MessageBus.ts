@@ -1,4 +1,4 @@
-import electron from 'electron'
+import electron, { WebFrame, webContents } from 'electron'
 
 // necessary info to find route to a specific client
 interface Route {
@@ -26,17 +26,21 @@ export class MessageBusServer {
 		content && content.sendToFrame(item.frameId, 'message-bus-broadcast', sender, ...msg)
 	    })
 	})
-	electron.ipcMain.addListener('message-bus-specific', (_ev, sender: Route, id, receiver: Route, ...msg) => {
-	    // directly send to receiver
-	    electron.webContents.fromId(receiver.contentId).sendToFrame(receiver.frameId, 'message-bus-specific', sender, id, ...msg)
-	})
-	electron.ipcMain.addListener('message-bus-specific-main', (_ev, sender: Route, id, receiver: number, ...msg) => {
-	    // hack: send to all frames under the specific webContents
-	    let content = electron.webContents.fromId(receiver)
-	    this.clients.filter(item => item.contentId == receiver)
-		.map(item => {
-		    content.sendToFrame(item.frameId, 'message-bus-specific', sender, id, ...msg)
-		})
+	electron.ipcMain.addListener('message-bus-specific', (_ev, sender: Route, id: number, receiver: Route | number, ...msg) => {
+	    let frames: number[] = []
+	    let content: webContents
+	    if (typeof(receiver) === 'number') {
+		content = electron.webContents.fromId(receiver)
+		// forward to all frames in specific content
+		frames = this.clients.filter(item => item.contentId == receiver).map(item => item.frameId)
+	    } else {
+		content = electron.webContents.fromId(receiver.contentId)
+		// directly forward to specific frame
+		frames = [receiver.frameId]
+	    }
+	    frames.map(
+		frameId => content.sendToFrame(frameId, 'message-bus-specific', sender, id, ...msg)
+	    )
 	})
 	electron.ipcMain.addListener('message-bus-reply', (_ev, _sender, _id, receiver: Route, ...msg) => {
 	    // directly send to receiver
@@ -70,8 +74,18 @@ export class MessageBusClient {
 	return this.nextId
     }
 
-    private sendToBus(channel: string, ...args:any[]) {
-	let id = this.allocId()
+    private sendToBus(id: number, channel: string, ...args: any[]): number
+    private sendToBus(channel: string, ...args: any[]): number
+    private sendToBus(id_or_channel: number | string, maybe_channel: string | any, ...args:any[]) {
+	let id, channel
+	if (typeof(id_or_channel) === 'number') {
+	    id = id_or_channel
+	    channel = maybe_channel as string
+	} else {
+	    id = this.allocId()
+	    channel = id_or_channel
+	    args = [maybe_channel].concat(args)
+	}
 	electron.ipcRenderer.send(channel, this.getRoute(), id, ...args)
 	return id
     }
@@ -88,8 +102,10 @@ export class MessageBusClient {
 	electron.ipcRenderer.on('message-bus-broadcast', (_ev, sender, id, msg) => {
 	    let asyncReply = false
 	    this.listeners.map(callback => {
-		asyncReply = asyncReply || callback(msg, {}, (reply: any) =>
-						    this.sendToBus('message-bus-reply', sender, id, true, reply))
+		asyncReply = callback(
+		    msg, {},
+		    (reply: any) => this.sendToBus('message-bus-reply', sender, id, true, reply)
+		) || asyncReply
 	    })
 	    if (!asyncReply)
 		this.sendToBus('message-bus-reply', sender, id, false)
@@ -98,8 +114,8 @@ export class MessageBusClient {
 	electron.ipcRenderer.on('message-bus-specific', (_ev, sender, id, msg) => {
 	    let asyncReply = false
 	    this.listeners.map(callback => {
-		asyncReply = asyncReply || callback(msg, {}, (reply: any) =>
-						    this.sendToBus('message-bus-reply', sender, id, reply))
+		asyncReply = callback(msg, {}, (reply: any) =>
+				      this.sendToBus('message-bus-reply', sender, id, true, reply)) || asyncReply
 	    })
 	    if (!asyncReply)
 		this.sendToBus('message-bus-reply', sender, id, false)
@@ -117,24 +133,26 @@ export class MessageBusClient {
 	this.listeners.push(callback)
     }
 
-    broadcast(msg: any, waitReply: boolean) {
+    broadcast(msg: any): void
+    broadcast(msg: any, waitReply: false): void
+    broadcast(msg: any, waitReply: true): Promise<any>
+    broadcast(msg: any, waitReply: boolean): Promise<any> | void
+    
+    broadcast(msg: any, waitReply: boolean = false) {
 	let id = this.sendToBus('message-bus-broadcast', msg)
 	return waitReply ? this.createReplyPromise(id) : undefined
     }
 
+    specific(msg: any, waitReply: true, contentId: number, frameId?: number): Promise<any>;
+    specific(msg: any, waitReply: false, contentId: number, frameId?: number): void;
+    specific(msg: any, waitReply: boolean, contentId: number, frameId?: number): Promise<any> | void;
+    
     specific(msg: any, waitReply: boolean, contentId: number, frameId?: number) {
-	let channel, receiver
-	if (frameId) {
-	    channel = 'message-bus-specific'
-	    receiver = {
-		contentId: contentId,
-		frameId: frameId
-	    }
-	} else {
-	    channel = 'message-bus-specific-main'
-	    receiver = contentId
+	let receiver = {
+	    contentId: contentId,
+	    frameId: frameId
 	}
-	let id = this.sendToBus(channel, receiver, msg)
+	let id = this.sendToBus('message-bus-specific', frameId ? receiver : contentId, msg)
 	return waitReply ? this.createReplyPromise(id) : undefined
     }
 }

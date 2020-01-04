@@ -4,12 +4,23 @@ import fs from 'fs'
 
 import { MessageBusServer } from './MessageBus'
 
+interface KC3ProtoConfig {
+    proxyConfig?: electron.Config
+}
+
+const PANEL_WIDTH = 600;
+const DEFAULT_GAME_WIDTH = 1200;
+const DEFAULT_GAME_HEIGHT = 720;
+const DEFAULT_FRAME_HEIGHT = 50;
+const DEFAULT_WINDOW_WIDTH = PANEL_WIDTH + DEFAULT_GAME_WIDTH
+const DEFAULT_WINDOW_HEIGHT = DEFAULT_FRAME_HEIGHT + DEFAULT_GAME_HEIGHT
+
 electron.app
     .on('ready', () => {
 	electron.ipcMain.addListener('renderer-logging', (_ev, ...args: any[]) => console.log(...args))
 	let window = new electron.BrowserWindow({
-	    width: 1800,
-	    height: 800,
+	    width: PANEL_WIDTH + DEFAULT_GAME_WIDTH,
+	    height: DEFAULT_FRAME_HEIGHT + DEFAULT_GAME_HEIGHT,
 	    title: "KC3 Prototype",
 	    webPreferences: {
 		webSecurity: false,
@@ -18,6 +29,13 @@ electron.app
 		preload: path.resolve(__dirname, 'preload.js')
 	    }
 	})
+
+	let config
+	try {
+	    config = JSON.parse(fs.readFileSync('./config.json', 'utf8')) as KC3ProtoConfig
+	} catch (_) {
+	    config = undefined
+	}
 
 	window.setMenuBarVisibility(false)
 
@@ -45,17 +63,29 @@ electron.app
 	window.addBrowserView(gameView)
 	window.addBrowserView(panelView)
 
-	gameView.setBounds({
-	    x: 0, y: 50,
-	    width: 1205,
-	    height: 725
+	const onWindowResize = (vw: number, vh: number) => {
+	    let gameWidth = vw - PANEL_WIDTH
+	    let height = vh - DEFAULT_FRAME_HEIGHT
+	    
+	    gameView.setBounds({
+		x: 0, y: DEFAULT_FRAME_HEIGHT,
+		width: gameWidth,
+		height: height
+	    })
+	    panelView.setBounds({
+		x: gameWidth, y: DEFAULT_FRAME_HEIGHT,
+		width: PANEL_WIDTH,
+		height: height
+	    })
+
+	    gameView.webContents.insertCSS("::-webkit-scrollbar { display: none; }")
+	}
+	onWindowResize(window.getBounds().width, window.getBounds().height)
+	window.on('resize', () => onWindowResize(window.getBounds().width, window.getBounds().height))
+	electron.ipcMain.on('kc3proto-window-update', () => {
+	    // assume this means fitScreen for now
+	    window.setBounds({ width: DEFAULT_WINDOW_WIDTH, height: DEFAULT_WINDOW_HEIGHT })
 	})
-	panelView.setBounds({
-	    x: 1210, y: 50,
-	    width: window.getBounds().width - 1210,
-	    height: 750
-	})
-	panelView.setAutoResize({ width: true })
 
 	// remove X-Frame-Options to allow login page in iframe
 	gameView.webContents.session.webRequest.onHeadersReceived((details, callback) => {
@@ -70,8 +100,18 @@ electron.app
 	    callback({cancel: false, responseHeaders: details.responseHeaders})
 	})
 
-	gameView.webContents.session.setProxy({ proxyRules: "socks5://localhost:1080" } as electron.Config)
+	config && config.proxyConfig && gameView.webContents.session.setProxy(config.proxyConfig)
 
+	electron.ipcMain.addListener(
+	    'kc3proto-update-config',
+	    (_ev, config: KC3ProtoConfig) => {
+		config.proxyConfig && gameView.webContents.session.setProxy(config.proxyConfig)
+		fs.writeFile('./config.json', JSON.stringify(config), () => {})
+	    }
+	)
+
+	window.webContents.openDevTools()
+	
 	window.loadFile('index.html')
 
 	// setup gameview navigation handlers
@@ -79,13 +119,12 @@ electron.app
 	    'will-navigate',
 	    (_ev, url) => window.webContents.send('kc3proto-on-game-navigate', url)
 	)
-	gameView.webContents.on(
-	    'will-redirect',
-	    (_ev, url) => window.webContents.send('kc3proton-on-game-navigate', url)
-	)
 	electron.ipcMain.addListener(
 	    'kc3proto-game-navigate',
-	    (_ev, url) => gameView.webContents.loadURL(url)
+	    (_ev, url) => {
+		gameView.webContents.loadURL(url)
+		window.webContents.send('kc3proto-on-game-navigate', url)
+	    }
 	)
 	electron.ipcMain.addListener(
 	    'kc3proto-open-window',
@@ -117,13 +156,13 @@ electron.app
 		    callback(p)
 	    }
 	)
-
+	
 	electron.ipcMain.on('kc3proto-request-inspected-tab-id', (ev) => {
 	    ev.returnValue = gameView.webContents.id
 	})
 
 	gameView.webContents.loadFile('kc3kai/src/pages/game/direct.html')
-	
-	// activate panel after gameview has loaded
 	panelView.webContents.loadFile('panelView.html')
+	gameView.webContents.openDevTools()
+	panelView.webContents.openDevTools()
     })

@@ -8,10 +8,6 @@ import { MessageBusClient } from './MessageBus'
 const log = (...args: any[]) => electron.ipcRenderer.send('renderer-logging', ...args)
 console.log = log
 
-// KC3Kai replaces console.log, which will cause problem before Log.js is correctly inited
-// so we won't use console.log in this script
-log(`href: ${document.location.href}`)
-
 // Chrome Polyfill
 require('./ChromePolyfills')
 
@@ -34,8 +30,6 @@ function loadJS(path: string) {
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
-    log(`loadend: ${document.location.href}`)
-
     if (window._isKC3PrototypeIndex) {
 	// load backgrounds
 	for (let item of background_scripts) {
@@ -88,6 +82,9 @@ window.addEventListener('DOMContentLoaded', async () => {
 	    await loadJS(item)
 	}
     }
+
+    // replace console.log again for KC3Prototype debugging purpose
+    console.log = log
 })
 
 window.addEventListener('load', () => {
@@ -102,6 +99,9 @@ window.addEventListener('load', () => {
 	    bus.broadcast({ type: "interceptor", response: res }, false)
 	    return res
 	})
+
+	// told main window to resize
+	electron.ipcRenderer.send('kc3proto-window-update')
     }
 })
 
