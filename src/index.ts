@@ -110,7 +110,7 @@ electron.app
 	    }
 	)
 
-	window.webContents.openDevTools()
+	// window.webContents.openDevTools()
 	
 	window.loadFile('index.html')
 
@@ -170,6 +170,6 @@ electron.app
 
 	gameView.webContents.loadFile('kc3kai/src/pages/game/direct.html')
 	panelView.webContents.loadFile('panelView.html')
-	gameView.webContents.openDevTools()
-	panelView.webContents.openDevTools()
+	// gameView.webContents.openDevTools()
+	// panelView.webContents.openDevTools()
     })

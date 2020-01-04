@@ -397,7 +397,9 @@ window.chrome = {
 			headers.push({ name: "Date", value: res.headers.date })
 			callback({
 			    request: {
-				url: res.config.url
+				url: res.config.url,
+				params: res.config.params,
+				postData: res.config.data
 			    },
 			    response: {
 				status: res.status,
